@@ -20,6 +20,11 @@ import scala.meta.internal.metals.clients.language.MetalsStatusParams
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.jsonrpc.messages
+import org.eclipse.lsp4j.WorkDoneProgressNotification
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.WorkDoneProgressEnd
 
 /**
  * Manages sending metals/status notifications to the editor client.
@@ -52,6 +57,23 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
+    val token: messages.Either[java.lang.String, java.lang.Integer] =
+      Right[String, Integer](3).asJava
+
+    val begin: messages.Either[
+      WorkDoneProgressNotification,
+      Object,
+    ] = {
+      val begin = new WorkDoneProgressBegin()
+      begin.setTitle("🤣 some title")
+      begin.setMessage("🤣 some message")
+      begin.setPercentage(0)
+      begin.setCancellable(true)
+
+      Left[WorkDoneProgressNotification, Object](begin).asJava
+    }
+
+    client.notifyProgress(new ProgressParams(token, begin))
     if (!clientConfig.slowTaskIsOn)
       trackBlockingTask(message)(thunk)
     else {
@@ -63,6 +85,16 @@ final class StatusBar(
           slowTaskFailed(message, e)
           throw e
       } finally {
+        val end: messages.Either[
+          WorkDoneProgressNotification,
+          Object,
+        ] = {
+          val end = new WorkDoneProgressEnd()
+          end.setMessage("🤣 some end message")
+
+          Left[WorkDoneProgressNotification, Object](end).asJava
+        }
+        client.notifyProgress(new ProgressParams(token, end))
         task.cancel(true)
       }
     }
@@ -73,6 +105,23 @@ final class StatusBar(
       thunk: Future[T],
       onCancel: () => Unit = () => (),
   ): Future[T] = {
+    val token: messages.Either[java.lang.String, java.lang.Integer] =
+      Right[String, Integer](3).asJava
+
+    val begin: messages.Either[
+      WorkDoneProgressNotification,
+      Object,
+    ] = {
+      val begin = new WorkDoneProgressBegin()
+      begin.setTitle("🥰 some title")
+      begin.setMessage("🥰 some message")
+      begin.setPercentage(0)
+      begin.setCancellable(true)
+
+      Left[WorkDoneProgressNotification, Object](begin).asJava
+    }
+
+    client.notifyProgress(new ProgressParams(token, begin))
     if (!clientConfig.slowTaskIsOn)
       trackFuture(message, thunk)
     else {
@@ -85,6 +134,16 @@ final class StatusBar(
           slowTaskFailed(message, exception)
           task.cancel(true)
         case Success(_) =>
+          val end: messages.Either[
+            WorkDoneProgressNotification,
+            Object,
+          ] = {
+            val end = new WorkDoneProgressEnd()
+            end.setMessage("🥰 some end message")
+
+            Left[WorkDoneProgressNotification, Object](end).asJava
+          }
+          client.notifyProgress(new ProgressParams(token, end))
           task.cancel(true)
       }
       thunk
@@ -145,7 +204,7 @@ final class StatusBar(
       case Some(value) =>
         val isUnchanged = activeItem.exists {
           // Don't re-publish static messages.
-          case m: Message => m eq value
+          case message: Message => message eq value
           case _ => false
         }
         if (!isUnchanged) {
