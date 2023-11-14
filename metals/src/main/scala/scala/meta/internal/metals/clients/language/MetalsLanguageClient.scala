@@ -28,7 +28,10 @@ trait MetalsLanguageClient
    *
    * - VS Code: https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem
    */
-  @JsonNotification("metals/status")
+  // @JsonNotification("metals/status")
+  // def metalsStatus(params: MetalsStatusParams): Unit
+
+  @JsonNotification("$/progress")
   def metalsStatus(params: MetalsStatusParams): Unit
 
   /**
